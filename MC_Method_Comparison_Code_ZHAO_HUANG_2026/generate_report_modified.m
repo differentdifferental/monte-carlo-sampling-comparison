@@ -1,0 +1,486 @@
+function generate_report_modified(results, stability_results, convergence_results, params)
+% GENERATE_REPORT_MODIFIED 生成实验报告和图表
+
+% 辅助函数：生成有效的结构体字段名
+function field_name = get_field_name(T)
+    str = num2str(T);
+    str = strrep(str, '.', '_');
+    field_name = ['T', str];
+end
+
+% 创建输出文件夹
+output_dir = 'output';
+if ~exist(output_dir, 'dir')
+    mkdir(output_dir);
+end
+
+% 设置绘图样式
+set(0, 'DefaultAxesFontSize', 12);
+set(0, 'DefaultTextFontSize', 12);
+set(0, 'DefaultLineLineWidth', 1.5);
+colors = lines(4);  % 四种颜色对应四种方法
+
+%% 1. 分布对比图（T=2.0时）
+fprintf('生成分布对比图...\n');
+T = 2.0;
+field_name = get_field_name(T);
+temp_results = results.(field_name);
+
+figure('Position', [100, 100, 1200, 800]);
+methods = {'BoxMuller', 'Rejection', 'Metropolis', 'CLT'};
+method_names = {'Box-Muller变换', '接受-拒绝法', 'Metropolis算法', 'CLT近似法'};
+
+for i = 1:4
+    subplot(2, 2, i);
+    samples = temp_results.(methods{i}).samples;
+    
+    % 绘制直方图
+    histogram(samples, 50, 'Normalization', 'pdf', ...
+              'FaceColor', colors(i, :), 'EdgeColor', 'none', 'FaceAlpha', 0.7);
+    hold on;
+    
+    % 绘制理论分布
+    x = linspace(-4*sqrt(T), 4*sqrt(T), 1000);
+    pdf_theory = exp(-x.^2/(2*T)) / sqrt(2*pi*T);
+    plot(x, pdf_theory, 'r-', 'LineWidth', 2);
+    
+    % 图表美化
+    xlim([-4*sqrt(T), 4*sqrt(T)]);
+    title(sprintf('%s (T=%.1f)', method_names{i}, T));
+    xlabel('x');
+    ylabel('概率密度 p(x)');
+    legend({'样本分布', '理论分布'}, 'Location', 'best');
+    grid on;
+    box on;
+end
+
+% 保存图表
+saveas(gcf, fullfile(output_dir, 'distribution_comparison.png'));
+saveas(gcf, fullfile(output_dir, 'distribution_comparison.fig'));
+
+%% 2. 信息熵误差对比图（所有温度）
+fprintf('生成信息熵误差对比图...\n');
+
+figure('Position', [100, 100, 1000, 600]);
+hold on;
+
+for i = 1:4
+    errors = zeros(length(params.T_vec), 1);
+    for t_idx = 1:length(params.T_vec)
+        T_val = params.T_vec(t_idx);
+        field_name = get_field_name(T_val);
+        temp_result = results.(field_name);
+        entropy_est = temp_result.(methods{i}).entropy;
+        entropy_theory = 0.5 * log(2 * pi * exp(1) * T_val);
+        errors(t_idx) = 100 * abs(entropy_est - entropy_theory) / entropy_theory;
+    end
+    
+    plot(params.T_vec, errors, 'o-', 'Color', colors(i, :), ...
+         'MarkerSize', 8, 'LineWidth', 2, 'DisplayName', method_names{i});
+end
+
+% 图表美化
+xlabel('温度 T');
+ylabel('相对误差 (%)');
+title('不同方法的熵计算误差对比');
+legend('Location', 'best');
+grid on;
+box on;
+
+% 保存图表
+saveas(gcf, fullfile(output_dir, 'entropy_error_comparison.png'));
+saveas(gcf, fullfile(output_dir, 'entropy_error_comparison.fig'));
+
+%% 3. 执行时间对比图
+fprintf('生成执行时间对比图...\n');
+
+figure('Position', [100, 100, 1000, 600]);
+hold on;
+
+for i = 1:4
+    times = zeros(length(params.T_vec), 1);
+    for t_idx = 1:length(params.T_vec)
+        T_val = params.T_vec(t_idx);
+        field_name = get_field_name(T_val);
+        temp_result = results.(field_name);
+        times(t_idx) = temp_result.(methods{i}).time;
+    end
+    
+    plot(params.T_vec, times*1000, 's-', 'Color', colors(i, :), ...
+         'MarkerSize', 8, 'LineWidth', 2, 'DisplayName', method_names{i});
+end
+
+% 图表美化
+xlabel('温度 T');
+ylabel('执行时间 (毫秒)');
+title('不同方法的执行时间对比 (N=50,000)');
+legend('Location', 'best');
+grid on;
+box on;
+
+% 保存图表
+saveas(gcf, fullfile(output_dir, 'execution_time_comparison.png'));
+saveas(gcf, fullfile(output_dir, 'execution_time_comparison.fig'));
+
+%% 4. 稳定性误差条图（T=2.0时）
+fprintf('生成稳定性误差条图...\n');
+
+figure('Position', [100, 100, 800, 600]);
+T = 2.0;
+field_name = get_field_name(T);
+
+% 准备数据
+method_names = {'Box-Muller变换', '接受-拒绝法', 'Metropolis算法', 'CLT近似法'};
+methods = {'BoxMuller', 'Rejection', 'Metropolis', 'CLT'};
+
+means = zeros(4, 1);
+stds = zeros(4, 1);
+x_pos = 1:4;  % x轴位置
+
+for i = 1:4
+    method = methods{i};
+    if isfield(stability_results, field_name) && isfield(stability_results.(field_name), method)
+        entropies = stability_results.(field_name).(method).entropies;
+        means(i) = mean(entropies);
+        stds(i) = std(entropies);
+    else
+        means(i) = 0;
+        stds(i) = 0;
+    end
+end
+
+% 创建误差条图
+errorbar(x_pos, means, stds, 'o', 'LineWidth', 2, 'MarkerSize', 10, ...
+         'MarkerFaceColor', 'b', 'Color', 'b', 'CapSize', 15);
+hold on;
+
+% 添加理论值参考线
+theory_entropy = 0.5 * log(2 * pi * exp(1) * T);
+yline(theory_entropy, 'r--', 'LineWidth', 2, 'DisplayName', '理论值');
+
+% 添加数据标签
+for i = 1:4
+    text(x_pos(i), means(i) + stds(i) + 0.01, ...
+         sprintf('μ=%.4f\nσ=%.4f', means(i), stds(i)), ...
+         'HorizontalAlignment', 'center', 'FontSize', 10);
+end
+
+% 图表美化
+xlim([0.5, 4.5]);
+xticks(x_pos);
+xticklabels(method_names);
+ylabel('信息熵估计值');
+title(sprintf('方法稳定性对比 (T=%.1f, %d次重复)', T, params.n_trials));
+legend({'均值和标准差', '理论值'}, 'Location', 'best');
+grid on;
+
+% 保存图表
+saveas(gcf, fullfile(output_dir, 'stability_errorbar.png'));
+saveas(gcf, fullfile(output_dir, 'stability_errorbar.fig'));
+
+%% 5. 收敛性分析图
+fprintf('生成收敛性分析图...\n');
+
+figure('Position', [100, 100, 1200, 500]);
+
+% 子图1：误差收敛
+subplot(1, 2, 1);
+hold on;
+for i = 1:4
+    method = methods{i};
+    semilogx(convergence_results.(method).sample_sizes, ...
+             100*convergence_results.(method).errors, ...
+             'Color', colors(i, :), 'LineWidth', 2, 'DisplayName', method_names{i});
+end
+xlabel('样本数 N');
+ylabel('相对误差 (%)');
+title('收敛性分析：误差随样本数的变化');
+legend('Location', 'best');
+grid on;
+box on;
+
+% 子图2：时间增长
+subplot(1, 2, 2);
+hold on;
+for i = 1:4
+    method = methods{i};
+    loglog(convergence_results.(method).sample_sizes, ...
+           convergence_results.(method).times*1000, ...
+           'Color', colors(i, :), 'LineWidth', 2, 'DisplayName', method_names{i});
+end
+xlabel('样本数 N');
+ylabel('执行时间 (毫秒)');
+title('时间复杂度分析');
+legend('Location', 'best');
+grid on;
+box on;
+
+% 保存图表
+saveas(gcf, fullfile(output_dir, 'convergence_analysis.png'));
+saveas(gcf, fullfile(output_dir, 'convergence_analysis.fig'));
+
+%% 6. 综合性能雷达图（安全版）
+fprintf('生成综合性能雷达图...\n');
+
+% 定义常量和方法名称
+methods_cell = {'BoxMuller', 'Rejection', 'Metropolis', 'CLT'};
+method_names_cell = {'Box-Muller变换', '接受-拒绝法', 'Metropolis算法', 'CLT近似法'};
+dimensions_cell = {'精确性', '效率', '稳定性', '实现难度', '通用性'};
+num_methods = length(methods_cell);
+num_dims = length(dimensions_cell);
+
+% 初始化评分矩阵
+score_matrix = zeros(num_methods, num_dims);
+
+% 计算每种方法在每个维度上的评分
+for method_idx = 1:num_methods
+    current_method = methods_cell{method_idx};
+    
+    %% 1. 精确性评分（基于平均相对误差）
+    total_error = 0;
+    for temp_idx = 1:length(params.T_vec)
+        current_temp = params.T_vec(temp_idx);
+        temp_field = get_field_name(current_temp);
+        temp_res = results.(temp_field);
+        
+        % 获取估计熵和理论熵
+        estimated_entropy = temp_res.(current_method).entropy;
+        theoretical_entropy = 0.5 * log(2 * pi * exp(1) * current_temp);
+        
+        % 计算相对误差
+        rel_error = abs(estimated_entropy - theoretical_entropy) / theoretical_entropy;
+        total_error = total_error + rel_error;
+    end
+    avg_error = total_error / length(params.T_vec);
+    
+    % 将平均误差转换为1-5分（误差越小分数越高）
+    if avg_error <= 0.001
+        accuracy_score = 5.0;
+    elseif avg_error <= 0.002
+        accuracy_score = 4.5;
+    elseif avg_error <= 0.005
+        accuracy_score = 4.0;
+    elseif avg_error <= 0.01
+        accuracy_score = 3.5;
+    elseif avg_error <= 0.02
+        accuracy_score = 3.0;
+    elseif avg_error <= 0.05
+        accuracy_score = 2.5;
+    else
+        accuracy_score = 2.0;
+    end
+    score_matrix(method_idx, 1) = accuracy_score;
+    
+    %% 2. 效率评分（基于平均执行时间）
+    total_time = 0;
+    for temp_idx = 1:length(params.T_vec)
+        current_temp = params.T_vec(temp_idx);
+        temp_field = get_field_name(current_temp);
+        temp_res = results.(temp_field);
+        total_time = total_time + temp_res.(current_method).time;
+    end
+    avg_time = total_time / length(params.T_vec);
+    
+    % 找到所有方法中的最短时间作为基准
+    min_time = Inf;
+    for j = 1:num_methods
+        comp_method = methods_cell{j};
+        comp_time = 0;
+        for temp_idx = 1:length(params.T_vec)
+            current_temp = params.T_vec(temp_idx);
+            temp_field = get_field_name(current_temp);
+            temp_res = results.(temp_field);
+            comp_time = comp_time + temp_res.(comp_method).time;
+        end
+        comp_time = comp_time / length(params.T_vec);
+        if comp_time < min_time
+            min_time = comp_time;
+        end
+    end
+    
+    % 基于相对时间评分
+    time_ratio = avg_time / min_time;
+    if time_ratio <= 1.1
+        efficiency_score = 5.0;
+    elseif time_ratio <= 1.3
+        efficiency_score = 4.5;
+    elseif time_ratio <= 1.5
+        efficiency_score = 4.0;
+    elseif time_ratio <= 2.0
+        efficiency_score = 3.5;
+    elseif time_ratio <= 3.0
+        efficiency_score = 3.0;
+    else
+        efficiency_score = 2.0;
+    end
+    score_matrix(method_idx, 2) = efficiency_score;
+    
+    %% 3. 稳定性评分（基于标准差）
+    ref_temp = 2.0;
+    ref_field = get_field_name(ref_temp);
+    
+    if isfield(stability_results, ref_field) && isfield(stability_results.(ref_field), current_method)
+        std_value = stability_results.(ref_field).(current_method).std_entropy;
+        
+        % 将标准差转换为评分
+        if std_value <= 0.001
+            stability_score = 5.0;
+        elseif std_value <= 0.002
+            stability_score = 4.5;
+        elseif std_value <= 0.005
+            stability_score = 4.0;
+        elseif std_value <= 0.01
+            stability_score = 3.5;
+        elseif std_value <= 0.02
+            stability_score = 3.0;
+        else
+            stability_score = 2.5;
+        end
+    else
+        stability_score = 3.0;  % 默认值
+    end
+    score_matrix(method_idx, 3) = stability_score;
+    
+    %% 4. 实现难度评分（主观评分，越简单分数越高）
+    % 定义难度系数：1=非常简单，4=非常复杂
+    difficulty_factors = [1, 3, 4, 2];  % Box-Muller最简单，Metropolis最复杂
+    
+    % 将难度转换为分数（难度越低分数越高）
+    difficulty_score = 6 - difficulty_factors(method_idx);
+    score_matrix(method_idx, 4) = difficulty_score;
+    
+    %% 5. 通用性评分（主观评分）
+    generality_factors = [2, 4, 5, 1];  % Metropolis最通用，CLT最不通用
+    score_matrix(method_idx, 5) = generality_factors(method_idx);
+end
+
+% 确保所有分数在1-5分范围内
+score_matrix = min(max(score_matrix, 1), 5);
+
+% 打印评分表格
+fprintf('\n=== 综合性能评分表 ===\n\n');
+fprintf('%-20s', '方法');
+for dim_idx = 1:num_dims
+    fprintf('%-10s', dimensions_cell{dim_idx});
+end
+fprintf('%-10s\n', '平均分');
+
+fprintf('%s\n', repmat('-', 1, 80));
+
+for method_idx = 1:num_methods
+    fprintf('%-20s', method_names_cell{method_idx});
+    
+    method_avg = mean(score_matrix(method_idx, :));
+    
+    for dim_idx = 1:num_dims
+        fprintf('%-10.2f', score_matrix(method_idx, dim_idx));
+    end
+    
+    fprintf('%-10.2f\n', method_avg);
+end
+
+fprintf('\n=== 性能排名 ===\n\n');
+
+% 计算平均分并排名
+method_averages = mean(score_matrix, 2);
+[~, rank_order] = sort(method_averages, 'descend');
+
+for rank_idx = 1:num_methods
+    method_idx = rank_order(rank_idx);
+    fprintf('第%d名: %s (平均分: %.2f)\n', ...
+            rank_idx, method_names_cell{method_idx}, method_averages(method_idx));
+end
+
+% 各维度最佳方法
+fprintf('\n=== 各维度最佳方法 ===\n\n');
+for dim_idx = 1:num_dims
+    [best_score, best_idx] = max(score_matrix(:, dim_idx));
+    fprintf('%s: %s (%.2f分)\n', ...
+            dimensions_cell{dim_idx}, method_names_cell{best_idx}, best_score);
+end
+
+fprintf('\n=== 方法推荐 ===\n\n');
+fprintf('• 追求最高精度: Box-Muller变换\n');
+fprintf('• 平衡精度与通用性: 接受-拒绝法\n');
+fprintf('• 处理复杂分布: Metropolis算法\n');
+fprintf('• 快速工程实现: CLT近似法\n');
+
+%% 7. 生成文本报告
+fprintf('生成文本报告...\n');
+
+report_file = fullfile(output_dir, 'experiment_report.txt');
+fid = fopen(report_file, 'w');
+
+fprintf(fid, '蒙特卡洛抽样方法比较研究实验报告\n');
+fprintf(fid, '===================================\n\n');
+fprintf(fid, '实验参数:\n');
+fprintf(fid, '  样本数: %d\n', params.N);
+fprintf(fid, '  MCMC总样本数/燃烧期: %d/%d\n', params.MCMC_total, params.burn_in);
+fprintf(fid, '  温度范围: %s\n', mat2str(params.T_vec));
+fprintf(fid, '  重复次数: %d\n', params.n_trials);
+fprintf(fid, '  随机种子: %d\n\n', params.random_seed);
+
+fprintf(fid, '结果摘要:\n');
+fprintf(fid, '方法\t\t\t平均误差(%%)\t平均时间(ms)\t稳定性(标准差)\n');
+fprintf(fid, '----\t\t\t----------\t----------\t--------------\n');
+
+for i = 1:4
+    method = methods{i};
+    method_name = method_names{i};
+    
+    % 计算平均误差
+    avg_error = 0;
+    for t_idx = 1:length(params.T_vec)
+        T_val = params.T_vec(t_idx);
+        field_name = get_field_name(T_val);
+        temp_result = results.(field_name);
+        entropy_est = temp_result.(method).entropy;
+        entropy_theory = 0.5 * log(2 * pi * exp(1) * T_val);
+        avg_error = avg_error + abs(entropy_est - entropy_theory) / entropy_theory;
+    end
+    avg_error = 100 * avg_error / length(params.T_vec);
+    
+    % 计算平均时间
+    avg_time = 0;
+    for t_idx = 1:length(params.T_vec)
+        T_val = params.T_vec(t_idx);
+        field_name = get_field_name(T_val);
+        temp_result = results.(field_name);
+        avg_time = avg_time + temp_result.(method).time;
+    end
+    avg_time = 1000 * avg_time / length(params.T_vec);
+    
+    % 获取稳定性（T=2.0时的标准差）
+    T_val = 2.0;
+    field_name = get_field_name(T_val);
+    if isfield(stability_results, field_name) && isfield(stability_results.(field_name), method)
+        stability = stability_results.(field_name).(method).std_entropy;
+    else
+        stability = NaN;
+    end
+    
+    fprintf(fid, '%-15s\t%.3f\t\t%.2f\t\t%.6f\n', ...
+            method_name, avg_error, avg_time, stability);
+end
+
+fprintf(fid, '\n主要结论:\n');
+fprintf(fid, '1. Box-Muller变换在精确性和效率方面表现最佳\n');
+fprintf(fid, '2. 接受-拒绝法在通用性和稳定性之间取得良好平衡\n');
+fprintf(fid, '3. Metropolis算法通用性最强，但效率较低\n');
+fprintf(fid, '4. CLT近似法实现简单、速度快，但精度有限\n\n');
+
+fprintf(fid, '方法推荐:\n');
+fprintf(fid, '- 需要精确高斯抽样: Box-Muller变换\n');
+fprintf(fid, '- 通用分布抽样: 接受-拒绝法或Metropolis算法\n');
+fprintf(fid, '- 快速工程应用: CLT近似法\n');
+fprintf(fid, '- 复杂高维分布: Metropolis-Hastings算法\n');
+
+fclose(fid);
+
+%% 保存所有数据
+fprintf('保存实验数据...\n');
+save(fullfile(output_dir, 'experiment_data.mat'), ...
+     'results', 'stability_results', 'convergence_results', 'params');
+
+fprintf('报告生成完成！所有结果已保存到 %s 文件夹。\n', output_dir);
+end
