@@ -1,4 +1,4 @@
-function entropy = calculate_entropy_simple(samples, T, varargin)
+function entropy = calculate_entropy(samples, T, varargin)
 % CALCULATE_ENTROPY_SIMPLE 计算信息熵
 % 设置直方图参数
 n_bins = 100;

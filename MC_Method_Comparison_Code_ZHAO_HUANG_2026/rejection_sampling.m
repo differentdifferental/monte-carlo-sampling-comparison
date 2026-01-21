@@ -1,4 +1,4 @@
-function [samples, exec_time, accept_rate] = rejection_sampling_simple(n, T, varargin)
+function [samples, exec_time, accept_rate] = rejection_sampling(n, T, varargin)
 % REJECTION_SAMPLING_SIMPLE 使用接受-拒绝法生成高斯分布样本
 
 tic;

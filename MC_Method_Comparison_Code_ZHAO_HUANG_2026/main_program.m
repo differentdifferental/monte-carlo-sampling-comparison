@@ -49,30 +49,30 @@ for t_idx = 1:length(params.T_vec)
     % 方法1: Box-Muller变换
     fprintf('  1. Box-Muller变换...\n');
     [temp_results.BoxMuller.samples, temp_results.BoxMuller.time] = ...
-        box_muller_fixed(params.N, T);
-    temp_results.BoxMuller.entropy = calculate_entropy_simple(...
+        box_muller(params.N, T);
+    temp_results.BoxMuller.entropy = calculate_entropy(...
         temp_results.BoxMuller.samples, T);
     
     % 方法2: 接受-拒绝法
     fprintf('  2. 接受-拒绝法...\n');
     [temp_results.Rejection.samples, temp_results.Rejection.time, ...
      temp_results.Rejection.accept_rate] = ...
-        rejection_sampling_simple(params.N, T);
-    temp_results.Rejection.entropy = calculate_entropy_simple(...
+        rejection_sampling(params.N, T);
+    temp_results.Rejection.entropy = calculate_entropy(...
         temp_results.Rejection.samples, T);
     
     % 方法3: Metropolis算法
     fprintf('  3. Metropolis算法...\n');
     [temp_results.Metropolis.samples, temp_results.Metropolis.time] = ...
-        metropolis_simple(params.MCMC_total, T, params.burn_in);
-    temp_results.Metropolis.entropy = calculate_entropy_simple(...
+        metropolis(params.MCMC_total, T, params.burn_in);
+    temp_results.Metropolis.entropy = calculate_entropy(...
         temp_results.Metropolis.samples, T);
     
     % 方法4: CLT近似法
     fprintf('  4. CLT近似法...\n');
     [temp_results.CLT.samples, temp_results.CLT.time] = ...
-        clt_approximation_simple(params.N, T);
-    temp_results.CLT.entropy = calculate_entropy_simple(...
+        clt_approximation(params.N, T);
+    temp_results.CLT.entropy = calculate_entropy(...
         temp_results.CLT.samples, T);
     
     % 存储当前温度结果
@@ -81,14 +81,14 @@ end
 
 %% 重复实验：统计稳定性
 fprintf('\n进行重复实验以评估稳定性...\n');
-stability_results = run_stability_experiment(params);
+stability_results = run_stability(params);
 
 %% 收敛性实验：不同样本量的表现
 fprintf('\n进行收敛性实验...\n');
-convergence_results = run_convergence_experiment(params);
+convergence_results = run_convergence(params);
 
 %% 生成报告和图表
 fprintf('\n生成报告和图表...\n');
-generate_report_modified(results, stability_results, convergence_results, params);
+generate_report(results, stability_results, convergence_results, params);
 
 fprintf('\n实验完成！结果已保存到output文件夹。\n');

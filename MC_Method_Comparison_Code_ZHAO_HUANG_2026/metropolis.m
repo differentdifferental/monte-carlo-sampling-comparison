@@ -1,4 +1,4 @@
-function [samples, exec_time] = metropolis_simple(n_total, T, burn_in, varargin)
+function [samples, exec_time] = metropolis(n_total, T, burn_in, varargin)
 % METROPOLIS_SIMPLE Metropolis算法
 
 tic;

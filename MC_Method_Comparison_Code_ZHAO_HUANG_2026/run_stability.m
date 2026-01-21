@@ -1,4 +1,4 @@
-function stability_results = run_stability_experiment(params)
+function stability_results = run_stability(params)
 % RUN_STABILITY_EXPERIMENT 运行稳定性实验
 
 % 辅助函数：生成有效的结构体字段名
@@ -35,20 +35,20 @@ for t_idx = 1:n_temps
             % 调用相应的抽样方法
             switch method
                 case 'BoxMuller'
-                    [samples, exec_time] = box_muller_fixed(params.N, T);
-                    entropy_val = calculate_entropy_simple(samples, T);
+                    [samples, exec_time] = box_muller(params.N, T);
+                    entropy_val = calculate_entropy(samples, T);
                     
                 case 'Rejection'
-                    [samples, exec_time, ~] = rejection_sampling_simple(params.N, T);
-                    entropy_val = calculate_entropy_simple(samples, T);
+                    [samples, exec_time, ~] = rejection_sampling(params.N, T);
+                    entropy_val = calculate_entropy(samples, T);
                     
                 case 'Metropolis'
-                    [samples, exec_time] = metropolis_simple(params.MCMC_total, T, params.burn_in);
-                    entropy_val = calculate_entropy_simple(samples, T);
+                    [samples, exec_time] = metropolis(params.MCMC_total, T, params.burn_in);
+                    entropy_val = calculate_entropy(samples, T);
                     
                 case 'CLT'
-                    [samples, exec_time] = clt_approximation_simple(params.N, T);
-                    entropy_val = calculate_entropy_simple(samples, T);
+                    [samples, exec_time] = clt_approximation(params.N, T);
+                    entropy_val = calculate_entropy(samples, T);
             end
             
             entropies(trial) = entropy_val;

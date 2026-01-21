@@ -1,4 +1,4 @@
-function generate_report_modified(results, stability_results, convergence_results, params)
+function generate_report(results, stability_results, convergence_results, params)
 % GENERATE_REPORT_MODIFIED 生成实验报告和图表
 
 % 辅助函数：生成有效的结构体字段名

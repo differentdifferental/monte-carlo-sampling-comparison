@@ -1,4 +1,4 @@
-function [samples, exec_time] = clt_approximation_simple(n, T, varargin)
+function [samples, exec_time] = clt_approximation(n, T, varargin)
 % CLT_APPROXIMATION_SIMPLE CLT近似法
 tic;
 
