@@ -15,9 +15,9 @@ if ~exist(output_dir, 'dir')
 end
 
 % 设置绘图样式
-set(0, 'DefaultAxesFontSize', 12);
-set(0, 'DefaultTextFontSize', 12);
-set(0, 'DefaultLineLineWidth', 1.5);
+set(0, 'DefaultAxesFontSize', 16);
+set(0, 'DefaultTextFontSize', 16);
+set(0, 'DefaultLineLineWidth', 2);
 colors = lines(4);  % 四种颜色对应四种方法
 
 %% 1. 分布对比图（T=2.0时）
@@ -181,26 +181,66 @@ saveas(gcf, fullfile(output_dir, 'stability_errorbar.fig'));
 %% 5. 收敛性分析图
 fprintf('生成收敛性分析图...\n');
 
-figure('Position', [100, 100, 1200, 500]);
+figure('Position', [100, 100, 900, 900]);
+
+% ========== 收敛性图显示范围配置 ==========
+% 可在此处修改显示范围
+% 有效范围：最小值100，最大值1,000,000（由logspace(2,6,20)生成）
+X_DISPLAY_RANGE = [100, 2e5];  % 修改此值调整横轴显示范围
+Y_DISPLAY_RANGE = [0, 5];      % 修改此值调整纵轴显示范围
+% ========================================
 
 % 子图1：误差收敛
-subplot(1, 2, 1);
+subplot(2, 1 , 1);
 hold on;
+
+% 绘制所有方法的曲线
 for i = 1:4
     method = methods{i};
     semilogx(convergence_results.(method).sample_sizes, ...
              100*convergence_results.(method).errors, ...
              'Color', colors(i, :), 'LineWidth', 2, 'DisplayName', method_names{i});
 end
+
+% 验证和应用显示范围
+data_min = min(convergence_results.BoxMuller.sample_sizes);
+data_max = max(convergence_results.BoxMuller.sample_sizes);
+
+% 检查横轴范围
+if X_DISPLAY_RANGE(1) < data_min
+    fprintf('警告：横轴最小值 %.0f < 数据最小值 %.0f，已自动调整\n', ...
+            X_DISPLAY_RANGE(1), data_min);
+    display_xmin = data_min;
+else
+    display_xmin = X_DISPLAY_RANGE(1);
+end
+
+if X_DISPLAY_RANGE(2) > data_max
+    fprintf('警告：横轴最大值 %.0f > 数据最大值 %.0f，已自动调整\n', ...
+            X_DISPLAY_RANGE(2), data_max);
+    display_xmax = data_max;
+else
+    display_xmax = X_DISPLAY_RANGE(2);
+end
+
+% 应用范围限制
+xlim([display_xmin, display_xmax]);
+if ~isempty(Y_DISPLAY_RANGE)
+    ylim(Y_DISPLAY_RANGE);
+end
+
+% 添加范围信息到标题
+title(sprintf('(a)收敛性分析：误差随样本数的变化', ...
+              display_xmin, display_xmax));
+
 xlabel('样本数 N');
 ylabel('相对误差 (%)');
-title('收敛性分析：误差随样本数的变化');
 legend('Location', 'best');
 grid on;
 box on;
 
 % 子图2：时间增长
-subplot(1, 2, 2);
+subplot(2, 1, 2);
 hold on;
 for i = 1:4
     method = methods{i};
@@ -210,7 +250,7 @@ for i = 1:4
 end
 xlabel('样本数 N');
 ylabel('执行时间 (毫秒)');
-title('时间复杂度分析');
+title('(b)时间复杂度分析');
 legend('Location', 'best');
 grid on;
 box on;
