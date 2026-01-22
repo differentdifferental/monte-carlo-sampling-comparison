@@ -1,6 +1,5 @@
 function [samples, exec_time] = box_muller(n, T, varargin)
 % BOX_MULLER_FIXED 使用Box-Muller变换生成高斯分布样本
-% 修正了数组越界问题
 
 tic;
 

@@ -15,9 +15,9 @@ if ~exist(output_dir, 'dir')
 end
 
 % 设置绘图样式
-set(0, 'DefaultAxesFontSize', 16);
-set(0, 'DefaultTextFontSize', 16);
-set(0, 'DefaultLineLineWidth', 2);
+set(0, 'DefaultAxesFontSize', 21);
+set(0, 'DefaultTextFontSize', 21);
+set(0, 'DefaultLineLineWidth', 2.5);
 colors = lines(4);  % 四种颜色对应四种方法
 
 %% 1. 分布对比图（T=2.0时）
@@ -49,7 +49,7 @@ for i = 1:4
     title(sprintf('%s (T=%.1f)', method_names{i}, T));
     xlabel('x');
     ylabel('概率密度 p(x)');
-    legend({'样本分布', '理论分布'}, 'Location', 'best');
+    legend({'样本分布', '理论分布'}, 'Location', 'northeast');
     grid on;
     box on;
 end
@@ -82,7 +82,7 @@ end
 % 图表美化
 xlabel('温度 T');
 ylabel('相对误差 (%)');
-title('不同方法的熵计算误差对比');
+%title('不同方法的熵计算误差对比');
 legend('Location', 'best');
 grid on;
 box on;
@@ -113,7 +113,7 @@ end
 % 图表美化
 xlabel('温度 T');
 ylabel('执行时间 (毫秒)');
-title('不同方法的执行时间对比 (N=50,000)');
+%title('不同方法的执行时间对比 (N=50,000)');
 legend('Location', 'best');
 grid on;
 box on;
@@ -170,7 +170,7 @@ xlim([0.5, 4.5]);
 xticks(x_pos);
 xticklabels(method_names);
 ylabel('信息熵估计值');
-title(sprintf('方法稳定性对比 (T=%.1f, %d次重复)', T, params.n_trials));
+%title(sprintf('方法稳定性对比 (T=%.1f, %d次重复)', T, params.n_trials));
 legend({'均值和标准差', '理论值'}, 'Location', 'best');
 grid on;
 
@@ -230,8 +230,8 @@ if ~isempty(Y_DISPLAY_RANGE)
 end
 
 % 添加范围信息到标题
-title(sprintf('(a)收敛性分析：误差随样本数的变化', ...
-              display_xmin, display_xmax));
+%title(sprintf('(a)收敛性分析：误差随样本数的变化', ...
+              %display_xmin, display_xmax));
 
 xlabel('样本数 N');
 ylabel('相对误差 (%)');
@@ -250,7 +250,7 @@ for i = 1:4
 end
 xlabel('样本数 N');
 ylabel('执行时间 (毫秒)');
-title('(b)时间复杂度分析');
+%title('(b)时间复杂度分析');
 legend('Location', 'best');
 grid on;
 box on;
@@ -259,7 +259,7 @@ box on;
 saveas(gcf, fullfile(output_dir, 'convergence_analysis.png'));
 saveas(gcf, fullfile(output_dir, 'convergence_analysis.fig'));
 
-%% 6. 综合性能雷达图（安全版）
+%% 6. 综合性能雷达图
 fprintf('生成综合性能雷达图...\n');
 
 % 定义常量和方法名称
