@@ -3,8 +3,8 @@ function entropy = calculate_entropy(samples, T, varargin)
 % 设置直方图参数
 n_bins = 100;
 sigma = sqrt(T);
-x_min = -4 * sigma;
-x_max = 4 * sigma;
+x_min = -6 * sigma;
+x_max = 6 * sigma;
 
 % 计算直方图
 [counts, bin_edges] = histcounts(samples, n_bins, 'BinLimits', [x_min, x_max]);

@@ -30,6 +30,26 @@ figure('Position', [100, 100, 1200, 800]);
 methods = {'BoxMuller', 'Rejection', 'Metropolis', 'CLT'};
 method_names = {'Box-Muller变换', '接受-拒绝法', 'Metropolis算法', 'CLT近似法'};
 
+% 定义子图标签
+subplot_labels = {'(a)', '(b)', '(c)', '(d)'};
+
+% ========== 设置横轴范围和刻度 ==========
+x_plot_min = -6.2 * sqrt(T);
+x_plot_max = 6.2 * sqrt(T);
+
+% 计算刻度位置
+sigma = sqrt(T);
+tick_positions = (-6:2:6) * sigma;
+
+% 使用简洁的刻度标签
+% 选项1：使用σ符号（最简洁，物理意义明确）
+tick_labels = {'-6σ', '-4σ', '-2σ', '0', '2σ', '4σ', '6σ'};
+
+% 如果需要显示数学格式，启用TeX解释器并简化表示
+% set(groot, 'defaultAxesTickLabelInterpreter', 'tex');
+% tick_labels = {'-6\surdT', '-4\surdT', '-2\surdT', '0', '2\surdT', '4\surdT', '6\surdT'};
+% =======================================
+
 for i = 1:4
     subplot(2, 2, i);
     samples = temp_results.(methods{i}).samples;
@@ -40,12 +60,41 @@ for i = 1:4
     hold on;
     
     % 绘制理论分布
-    x = linspace(-4*sqrt(T), 4*sqrt(T), 1000);
+    x = linspace(x_plot_min, x_plot_max, 1000);
     pdf_theory = exp(-x.^2/(2*T)) / sqrt(2*pi*T);
-    plot(x, pdf_theory, 'r-', 'LineWidth', 2);
+    plot(x, pdf_theory, 'r-', 'LineWidth', 1.5);
     
-    % 图表美化
-    xlim([-4*sqrt(T), 4*sqrt(T)]);
+    % 仅在图(d)添加截断线
+    if i == 4
+        trunc_boundary = 6 * sqrt(T);
+        
+        line([trunc_boundary, trunc_boundary], ylim, ...
+             'Color', 'b', 'LineStyle', '--', 'LineWidth', 1.5);
+        line([-trunc_boundary, -trunc_boundary], ylim, ...
+             'Color', 'b', 'LineStyle', '--', 'LineWidth', 1.5);
+        
+        ylim_current = ylim;
+        text_y_pos = ylim_current(2) * 0.6;
+        
+        text(trunc_boundary*0.95, text_y_pos, '截断边界', ...
+             'Color', 'b', 'FontSize', 21, 'HorizontalAlignment', 'right');
+        text(-trunc_boundary*0.95, text_y_pos, '截断边界', ...
+             'Color', 'b', 'FontSize', 21, 'HorizontalAlignment', 'left');
+    end
+    
+    % 添加子图标签
+    text(0.02, 0.98, subplot_labels{i}, 'Units', 'normalized', ...
+         'VerticalAlignment', 'top', 'HorizontalAlignment', 'left', ...
+         'FontSize', 24, 'FontWeight', 'bold', 'Color', 'k');
+    
+    % 设置横轴刻度和标签
+    xlim([x_plot_min, x_plot_max]);
+    xticks(tick_positions);
+    xticklabels(tick_labels);
+    
+    % 可选：旋转刻度避免重叠
+    xtickangle(0);  % 恢复为0度（不旋转），因为标签现在很短
+    
     title(sprintf('%s (T=%.1f)', method_names{i}, T));
     xlabel('x');
     ylabel('概率密度 p(x)');
@@ -94,7 +143,10 @@ saveas(gcf, fullfile(output_dir, 'entropy_error_comparison.fig'));
 %% 3. 执行时间对比图
 fprintf('生成执行时间对比图...\n');
 
-figure('Position', [100, 100, 1000, 600]);
+figure('Position', [100, 100, 900, 900]);
+
+% ========== 子图(a): 不同温度下的执行时间 ==========
+subplot(2, 1, 1);
 hold on;
 
 for i = 1:4
@@ -113,14 +165,61 @@ end
 % 图表美化
 xlabel('温度 T');
 ylabel('执行时间 (毫秒)');
-%title('不同方法的执行时间对比 (N=50,000)');
+legend('off');
+grid on;
+box on;
+
+% 添加子图标签
+text(0.02, 0.98, '(a)', 'Units', 'normalized', ...
+     'VerticalAlignment', 'top', 'HorizontalAlignment', 'left', ...
+     'FontSize', 24, 'FontWeight', 'bold', 'Color', 'k');
+
+% ========== 子图(b): 不同样本量下的执行时间 ==========
+subplot(2, 1, 2);
+hold on;
+
+% 固定温度 T=2.0（收敛性实验的固定温度）
+T_convergence = 2.0;
+
+for i = 1:4
+    method = methods{i};
+    if isfield(convergence_results, method)
+        loglog(convergence_results.(method).sample_sizes, ...
+               convergence_results.(method).times*1000, ...
+               'Color', colors(i, :), 'LineWidth', 2, 'DisplayName', method_names{i});
+    end
+end
+
+% 图表美化
+xlabel('样本数 N');
+ylabel('执行时间 (毫秒)');
 legend('Location', 'best');
 grid on;
 box on;
 
+% 添加子图标签
+text(0.02, 0.98, '(b)', 'Units', 'normalized', ...
+     'VerticalAlignment', 'top', 'HorizontalAlignment', 'left', ...
+     'FontSize', 24, 'FontWeight', 'bold', 'Color', 'k');
+
 % 保存图表
 saveas(gcf, fullfile(output_dir, 'execution_time_comparison.png'));
 saveas(gcf, fullfile(output_dir, 'execution_time_comparison.fig'));
+
+%% 在图3(b)代码后添加：
+ax = gca; % 获取当前坐标轴
+fprintf('图3(b)坐标轴信息:\n');
+fprintf('  X轴类型: %s\n', ax.XScale);
+fprintf('  Y轴类型: %s\n', ax.YScale);
+fprintf('  X轴范围: [%.1e, %.1e]\n', ax.XLim(1), ax.XLim(2));
+fprintf('  X轴刻度位置: ');
+fprintf('%.1e ', ax.XTick);
+fprintf('\n');
+fprintf('  X轴刻度标签: ');
+for i = 1:length(ax.XTickLabel)
+    fprintf('%s ', ax.XTickLabel{i});
+end
+fprintf('\n');
 
 %% 4. 稳定性误差条图（T=2.0时）
 fprintf('生成稳定性误差条图...\n');
@@ -181,7 +280,7 @@ saveas(gcf, fullfile(output_dir, 'stability_errorbar.fig'));
 %% 5. 收敛性分析图
 fprintf('生成收敛性分析图...\n');
 
-figure('Position', [100, 100, 900, 900]);
+figure('Position', [100, 100, 900, 600]);
 
 % ========== 收敛性图显示范围配置 ==========
 % 可在此处修改显示范围
@@ -190,16 +289,17 @@ X_DISPLAY_RANGE = [100, 2e5];  % 修改此值调整横轴显示范围
 Y_DISPLAY_RANGE = [0, 5];      % 修改此值调整纵轴显示范围
 % ========================================
 
-% 子图1：误差收敛
-subplot(2, 1 , 1);
 hold on;
 
 % 绘制所有方法的曲线
 for i = 1:4
     method = methods{i};
-    semilogx(convergence_results.(method).sample_sizes, ...
-             100*convergence_results.(method).errors, ...
-             'Color', colors(i, :), 'LineWidth', 2, 'DisplayName', method_names{i});
+    if isfield(convergence_results, method)
+        semilogx(convergence_results.(method).sample_sizes, ...
+                 100*convergence_results.(method).errors, ...
+                 'Color', colors(i, :), 'LineWidth', 2.5, ...
+                 'DisplayName', method_names{i});
+    end
 end
 
 % 验证和应用显示范围
@@ -229,31 +329,15 @@ if ~isempty(Y_DISPLAY_RANGE)
     ylim(Y_DISPLAY_RANGE);
 end
 
-% 添加范围信息到标题
-%title(sprintf('(a)收敛性分析：误差随样本数的变化', ...
-              %display_xmin, display_xmax));
-
+% 图表美化
 xlabel('样本数 N');
 ylabel('相对误差 (%)');
-legend('Location', 'best');
+legend('Location', 'best', 'FontSize', 14);
 grid on;
 box on;
 
-% 子图2：时间增长
-subplot(2, 1, 2);
-hold on;
-for i = 1:4
-    method = methods{i};
-    loglog(convergence_results.(method).sample_sizes, ...
-           convergence_results.(method).times*1000, ...
-           'Color', colors(i, :), 'LineWidth', 2, 'DisplayName', method_names{i});
-end
-xlabel('样本数 N');
-ylabel('执行时间 (毫秒)');
-%title('(b)时间复杂度分析');
-legend('Location', 'best');
-grid on;
-box on;
+% 添加图标题
+%title('收敛性分析：相对误差随样本数的变化', 'FontSize', 16);
 
 % 保存图表
 saveas(gcf, fullfile(output_dir, 'convergence_analysis.png'));
