@@ -270,7 +270,7 @@ xticks(x_pos);
 xticklabels(method_names);
 ylabel('信息熵估计值');
 %title(sprintf('方法稳定性对比 (T=%.1f, %d次重复)', T, params.n_trials));
-legend({'均值和标准差', '理论值'}, 'Location', 'best');
+legend({'均值和标准差', '理论值'}, 'Location',  'northwest');
 grid on;
 
 % 保存图表
@@ -332,7 +332,7 @@ end
 % 图表美化
 xlabel('样本数 N');
 ylabel('相对误差 (%)');
-legend('Location', 'best', 'FontSize', 14);
+legend('Location', 'best');
 grid on;
 box on;
 
